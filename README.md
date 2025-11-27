@@ -1,6 +1,6 @@
 # Marburg Virus VSP Illumina Analysis Pipeline
 
-This repository contains a full analysis pipeline for processing Illumina sequencing data of Marburg virus (MARV) samples. The workflow includes raw data quality control, host read removal, mapping, variant calling, consensus generation, phylogenetic analysis, and coverage assessment. The pipeline is designed to be modular, reproducible, and suitable for batch processing of multiple samples.
+This repository contains a  analysis pipeline for processing Illumina sequencing data of Marburg virus (MARV) samples. The workflow includes raw data quality control, host read removal, mapping, variant calling, consensus generation, phylogenetic analysis, and coverage assessment. The pipeline is modular, reproducible, and suitable for batch processing of multiple samples.
 
 ---
 
@@ -32,38 +32,19 @@ This pipeline automates the analysis of Illumina sequencing reads for Marburg vi
 
 The workflow is organized into the following steps, each implemented as a batch script:
 
-1. **FastQ Quality Control (`fastp_batch.sh`)**  
-   Performs quality trimming, adapter removal, and filtering of raw FASTQ reads.
-
-2. **Host Read Removal (`host_removal_batch.sh`)**  
-   Removes human or other host reads to retain only non-host sequences.
-
-3. **Mapping (`mapping_batch.sh`)**  
-   Maps non-host reads to the Marburg reference genome using **Minimap2**, producing sorted BAM files.
-
-4. **Variant Calling (`variant_calling_batch.sh`)**  
-   Calls variants from mapped BAM files using **samtools mpileup** and **iVar**, producing TSV variant files.
-
-5. **Consensus Generation (`consensus_batch.sh`)**  
-   Generates consensus sequences from BAM files using iVar, with customizable thresholds for base calling.
-
-6. **Coverage Analysis (`coverage_batch.sh`)**  
-   Computes per-base depth, genome coverage statistics, and the proportion of ambiguous bases (N).
-
-7. **Multiple Sequence Alignment (`msa_batch.sh`)**  
-   Aligns consensus sequences using **MAFFT** for downstream phylogenetic analysis.
-
-8. **Phylogenetic Analysis (`iqtree_batch.sh`)**  
-   Builds phylogenetic trees from multiple sequence alignments using **IQ-TREE**.
-
-9. **MultiQC Reporting (`multiqc_batch.sh`)**  
-   Aggregates QC reports across all samples for easy review.
-
-10. **Pipeline Launcher (`run_marg_full_pipeline.sh`)**  
-    Executes the entire workflow in sequence, handling all intermediate directories and logging.
-
-11. **Utility Script (`copy_marv_fasta.sh`)**  
-    Copies and prepares reference and consensus FASTA files for downstream analyses.
+| Step | Script                      | Description                                                                                               |
+| ---- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1    | `copy_marv_fasta.sh`        | Filters downloaded Marburg virus genomes ≥18,000 bp and prepares reference files.                         |
+| 2    | `fastp_batch.sh`            | Quality trimming, adapter removal, and filtering of raw FASTQ reads.                                      |
+| 3    | `host_removal_batch.sh`     | Removes host reads to retain viral sequences.                                                             |
+| 4    | `mapping_batch.sh`          | Maps reads to the Marburg reference genome using Minimap2.                                                |
+| 5    | `variant_calling_batch.sh`  | Calls variants using samtools mpileup and iVar.                                                           |
+| 6    | `consensus_batch.sh`        | Generates consensus sequences from BAM files using iVar.                                                  |
+| 7    | `coverage_batch.sh`         | Computes per-base coverage, genome coverage, and ambiguous bases.                                         |
+| 8    | `msa_batch.sh`              | Combines reference and consensus sequences, aligns with MAFFT, trims with trimAl, generates CSV metadata. |
+| 9    | `iqtree_batch.sh`           | Builds phylogenetic trees from MSA using IQ-TREE, restores original leaf names, and creates summary.      |
+| 10   | `multiqc_batch.sh`          | Aggregates QC reports across all samples.                                                                 |
+| 11   | `run_marg_full_pipeline.sh` | Launches the entire workflow in sequence, handling intermediate directories and logging.                  |
 
 ---
 
@@ -83,9 +64,86 @@ The pipeline uses the following software tools:
 
 **Conda environments** are used to manage dependencies:
 
-- `mapping_env` → for Minimap2 mapping
-- `ivar_env` → for variant calling and consensus generation
-
+# ------------------------
+### 1 FastQ Quality Control
+# ------------------------
+```bash
+conda create -n fastp_env -c bioconda -y fastp
+conda activate fastp_env
+fastp --version
+conda deactivate
+```
+# ------------------------
+### 2 Host Read Removal
+# ------------------------
+```bash
+conda create -n host_env -c bioconda -y bowtie2
+conda activate host_env
+bowtie2 --version
+conda deactivate
+```
+# ------------------------
+# 3 Mapping (Minimap2)
+# ------------------------
+```bash
+conda create -n mapping_env -c bioconda -y minimap2 samtools
+conda activate mapping_env
+minimap2 --version
+samtools --version
+conda deactivate
+```
+# ------------------------
+### 4 Variant Calling & Consensus (iVar)
+# ------------------------
+```
+conda create -n ivar_env -c bioconda -y samtools ivar
+conda activate ivar_env
+samtools --version
+ivar --help
+conda deactivate
+```
+# ------------------------
+### 5 Multiple Sequence Alignment (MAFFT)
+# ------------------------
+```bash
+conda create -n mafft_env -c bioconda -y mafft
+conda activate mafft_env
+mafft --version
+conda deactivate
+```
+# ------------------------
+### 6 Phylogenetic Analysis (IQ-TREE)
+# ------------------------
+```bash
+conda create -n iqtree_env -c bioconda -y iqtree
+conda activate iqtree_env
+iqtree --version
+conda deactivate
+```
+# ------------------------
+### 7 MultiQC Reporting
+# ------------------------
+```bash
+conda create -n multiqc_env -c bioconda -y multiqc
+conda activate multiqc_env
+multiqc --version
+conda deactivate
+```
+# 8. MSA (MAFFT + trimAl)
+```bash
+conda create -n mafft_env -c bioconda -y mafft trimal
+conda activate mafft_env
+mafft --version
+trimal -version
+conda deactivate
+```
+# 9. IQ-TREE
+```bash
+conda create -n iqtree_env -c bioconda -y iqtree
+conda activate iqtree_env
+iqtree3 --version
+conda deactivate
+```
 ---
 
 ## Installation
@@ -95,7 +153,71 @@ The pipeline uses the following software tools:
 git clone https://github.com/betselotz/Marburg-Virus-VSP-Illumina-Analysis.git
 cd Marburg-Virus-VSP-Illumina-Analysis
 ```
+2. Create required Conda environments:
+
+## Usage
+1. Place raw FASTQ files in a designated directory (e.g., raw_reads/).
+2. Prepare the reference genome in reference_genomes/Marburg_reference.fasta.
+3. Run the full pipeline:
+```bash
+bash scripts/run_marg_full_pipeline.sh
+```
+4. Alternatively, run individual steps as needed:
+```bash
+bash scripts/fastp_batch.sh
+```
+```bash
+bash scripts/host_removal_batch.sh
+```
+```bash
+bash scripts/mapping_batch.sh
+```
+```bash
+bash scripts/variant_calling_batch.sh
+```
+```bash
+bash scripts/consensus_batch.sh
+```
+```bash
+bash scripts/coverage_batch.sh
+```
+```bash
+bash scripts/msa_batch.sh
+```
+```bash
+bash scripts/iqtree_batch.sh
+```
+```bash
+bash scripts/multiqc_batch.sh
+```
+
+## Directory Structure
+Marburg-Virus-VSP-Illumina-Analysis/
+├── raw_reads/                  # Raw FASTQ files
+├── reference_genomes/          # Reference FASTA files
+├── results/                    # Processed outputs
+│   ├── 03_nonhuman_reads/
+│   ├── 04_mapped_bam/
+│   ├── 05_variants/
+│   ├── 06_consensus/
+│   ├── 07_coverage/
+│   └── 10_phylogeny/
+├── scripts/                    # Pipeline batch scripts
+├── logs/                       # Log files for each step
+└── README.md                   # This file
+
+## Logging
+Each script writes per-sample logs in logs/.
+A summary table is generated for mapping, variant calling, consensus, and coverage statistics.
+Logs capture runtime, errors, and pipeline decisions.
+
+## Authors
+
+Betselot Zerihun Ayano – Principal developer
+GitHub: @betselotz
+
+## License
+
+This repository is open for academic and research use.
 
 
-git clone https://github.com/betselotz/Marburg-Virus-VSP-Illumina-Analysis.git
-cd Marburg-Virus-VSP-Illumina-Analysis
