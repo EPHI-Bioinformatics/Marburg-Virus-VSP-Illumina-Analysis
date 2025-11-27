@@ -54,13 +54,17 @@ The pipeline uses the following software tools:
 
 - [Git](https://git-scm.com/)
 - [Conda](https://docs.conda.io/en/latest/)
-- [samtools](http://www.htslib.org/)
-- [iVar](https://andersen-lab.github.io/ivar/html/)
-- [minimap2](https://github.com/lh3/minimap2)
-- [MAFFT](https://mafft.cbrc.jp/alignment/software/)
-- [IQ-TREE](http://www.iqtree.org/)
-- [MultiQC](https://multiqc.info/)
+- [fastp](https://github.com/OpenGene/fastp) – Quality control of FASTQ reads
+- [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) – Host read removal
+- [samtools](http://www.htslib.org/) – BAM/SAM manipulation
+- [iVar](https://andersen-lab.github.io/ivar/html/) – Variant calling and consensus generation
+- [minimap2](https://github.com/lh3/minimap2) – Read mapping
+- [MAFFT](https://mafft.cbrc.jp/alignment/software/) – Multiple sequence alignment
+- [trimAl](http://trimal.cgenomics.org/) – Alignment trimming
+- [IQ-TREE](http://www.iqtree.org/) – Phylogenetic analysis
+- [MultiQC](https://multiqc.info/) – Aggregated QC reporting
 - Standard UNIX utilities: `awk`, `grep`, `tr`, `wc`
+
 
 **Conda environments** are used to manage dependencies:
 
