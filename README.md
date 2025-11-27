@@ -163,11 +163,17 @@ bash scripts/multiqc_batch.sh
 ## Directory Structure
 ```bash
 Marburg-Virus-VSP-Illumina-Analysis/
-├── raw_reads/                  
+├── raw_reads/
+│   ├── MARV_X_1.fastq.gz
+│   └── MARV_X_2.fastq.gz                 
 ├── reference_genomes/
+│   ├── NC_001608.4.fasta (reference)
+│   ├── EF446131.1.fasta (ourgroup)
 │   ├── MARV_downloads/
 │   └── MARV_compare/
 ├── results/
+│   ├── 01_fastp
+│   ├── 02_clean_reads
 │   ├── 03_nonhuman_reads/
 │   ├── 04_mapped_bam/
 │   ├── 05_variants/
