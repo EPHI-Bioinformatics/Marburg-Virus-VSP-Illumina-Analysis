@@ -64,86 +64,6 @@ The pipeline uses the following software tools:
 
 **Conda environments** are used to manage dependencies:
 
-# ------------------------
-### 1 FastQ Quality Control
-# ------------------------
-```bash
-conda create -n fastp_env -c bioconda -y fastp
-conda activate fastp_env
-fastp --version
-conda deactivate
-```
-# ------------------------
-### 2 Host Read Removal
-# ------------------------
-```bash
-conda create -n host_env -c bioconda -y bowtie2
-conda activate host_env
-bowtie2 --version
-conda deactivate
-```
-# ------------------------
-# 3 Mapping (Minimap2)
-# ------------------------
-```bash
-conda create -n mapping_env -c bioconda -y minimap2 samtools
-conda activate mapping_env
-minimap2 --version
-samtools --version
-conda deactivate
-```
-# ------------------------
-### 4 Variant Calling & Consensus (iVar)
-# ------------------------
-```
-conda create -n ivar_env -c bioconda -y samtools ivar
-conda activate ivar_env
-samtools --version
-ivar --help
-conda deactivate
-```
-# ------------------------
-### 5 Multiple Sequence Alignment (MAFFT)
-# ------------------------
-```bash
-conda create -n mafft_env -c bioconda -y mafft
-conda activate mafft_env
-mafft --version
-conda deactivate
-```
-# ------------------------
-### 6 Phylogenetic Analysis (IQ-TREE)
-# ------------------------
-```bash
-conda create -n iqtree_env -c bioconda -y iqtree
-conda activate iqtree_env
-iqtree --version
-conda deactivate
-```
-# ------------------------
-### 7 MultiQC Reporting
-# ------------------------
-```bash
-conda create -n multiqc_env -c bioconda -y multiqc
-conda activate multiqc_env
-multiqc --version
-conda deactivate
-```
-# 8. MSA (MAFFT + trimAl)
-```bash
-conda create -n mafft_env -c bioconda -y mafft trimal
-conda activate mafft_env
-mafft --version
-trimal -version
-conda deactivate
-```
-# 9. IQ-TREE
-```bash
-conda create -n iqtree_env -c bioconda -y iqtree
-conda activate iqtree_env
-iqtree3 --version
-conda deactivate
-```
 ---
 
 ## Installation
@@ -153,7 +73,52 @@ conda deactivate
 git clone https://github.com/betselotz/Marburg-Virus-VSP-Illumina-Analysis.git
 cd Marburg-Virus-VSP-Illumina-Analysis
 ```
+
 2. Create required Conda environments:
+ 1. FastQ Quality Control (fastp)
+```bash
+conda create -n fastp_env -c bioconda -y fastp && conda run -n fastp_env fastp --version
+```
+ 2. Host Read Removal (Bowtie2)
+```bash
+conda create -n host_env -c bioconda -y bowtie2 && conda run -n host_env bowtie2 --version
+```
+ 3. Mapping (Minimap2 + Samtools)
+```bash
+conda create -n mapping_env -c bioconda -y minimap2 samtools && conda run -n mapping_env minimap2 --version && conda run -n mapping_env samtools --version
+```
+ 4. Variant Calling & Consensus (iVar + Samtools)
+```bash
+conda create -n ivar_env -c bioconda -y samtools ivar && conda run -n ivar_env samtools --version && conda run -n ivar_env ivar --help
+```
+ 5. Multiple Sequence Alignment (MAFFT + trimAl)
+```bash
+conda create -n mafft_env -c bioconda -y mafft trimal && conda run -n mafft_env mafft --version && conda run -n mafft_env trimal -version
+```
+```bash
+# Phylogenetic Analysis (IQ-TREE)
+```bash
+conda create -n iqtree_env -c bioconda -y iqtree && conda run -n iqtree_env iqtree3 --version
+```
+7. MultiQC Reporting
+```bash
+conda create -n multiqc_env -c bioconda -y multiqc && conda run -n multiqc_env multiqc --version
+```
+8. MSA with trimAl (MAFFT + trimAl)
+```bash
+conda create -n mafft_env -c bioconda -y mafft trimal && conda run -n mafft_env mafft --version && conda run -n mafft_env trimal -version
+```
+9. IQ-TREE (redundant if already done in #6, but included for clarity)
+```bash
+conda create -n iqtree_env -c bioconda -y iqtree && conda run -n iqtree_env iqtree3 --version
+```
+
+3. Prepare input directories:
+```bash
+raw_reads/                  # Raw FASTQ files
+reference_genomes/MARV_downloads/   # Downloaded MARV genomes
+reference_genomes/MARV_compare/     # Filtered reference genomes
+```
 
 ## Usage
 1. Place raw FASTQ files in a designated directory (e.g., raw_reads/).
