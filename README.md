@@ -192,19 +192,24 @@ bash scripts/multiqc_batch.sh
 ```
 
 ## Directory Structure
+```bash
 Marburg-Virus-VSP-Illumina-Analysis/
-├── raw_reads/                  # Raw FASTQ files
-├── reference_genomes/          # Reference FASTA files
-├── results/                    # Processed outputs
+├── raw_reads/                  
+├── reference_genomes/
+│   ├── MARV_downloads/
+│   └── MARV_compare/
+├── results/
 │   ├── 03_nonhuman_reads/
 │   ├── 04_mapped_bam/
 │   ├── 05_variants/
 │   ├── 06_consensus/
 │   ├── 07_coverage/
+│   ├── 09_msa/
 │   └── 10_phylogeny/
-├── scripts/                    # Pipeline batch scripts
-├── logs/                       # Log files for each step
-└── README.md                   # This file
+├── scripts/                    
+├── logs/                       
+└── README.md                   
+```
 
 ## Logging
 Each script writes per-sample logs in logs/.
