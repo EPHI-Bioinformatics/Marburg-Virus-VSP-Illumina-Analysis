@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BAM_DIR="$PROJECT_DIR/results/04_mapped_bam"
-VAR_DIR="$PROJECT_DIR/results/05_variants"
+VAR_DIR="$PROJECT_DIR/results/06_variants"
 MARBURG_REFERENCE="$PROJECT_DIR/reference_genomes/Marburg_reference.fasta"
 
 THREADS=$(( $(nproc) > 2 ? $(nproc) - 2 : 1 ))

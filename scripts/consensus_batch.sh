@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BAM_DIR="$PROJECT_DIR/results/04_mapped_bam"
-CONS_DIR="$PROJECT_DIR/results/06_consensus"
+CONS_DIR="$PROJECT_DIR/results/07_consensus"
 LOG_FILE="$PROJECT_DIR/pipeline_consensus_log_$(date +%Y%m%d_%H%M%S).txt"
 
 mkdir -p "$CONS_DIR"

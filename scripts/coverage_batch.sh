@@ -3,8 +3,8 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BAM_DIR="$PROJECT_DIR/results/04_mapped_bam"
-CONS_DIR="$PROJECT_DIR/results/06_consensus"
-COVERAGE_DIR="$PROJECT_DIR/results/07_coverage"
+CONS_DIR="$PROJECT_DIR/results/07_consensus"
+COVERAGE_DIR="$PROJECT_DIR/results/08_coverage"
 mkdir -p "$COVERAGE_DIR"
 
 THREADS=$(( $(nproc) > 2 ? $(nproc) - 2 : 1 ))
