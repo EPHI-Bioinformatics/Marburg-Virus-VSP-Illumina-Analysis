@@ -65,7 +65,7 @@ The pipeline uses the following software tools:
 - [Qualimap](http://qualimap.bioinfo.cipf.es) – BAM QC
 - [MAFFT](https://mafft.cbrc.jp/alignment/software/) – Multiple sequence alignment
 - [trimAl](http://trimal.cgenomics.org/) – Alignment trimming
-- [Qualimap](http://qualimap.conesalab.org/) - Evaluating sequencing alignment data
+- [Nextclade](https://clades.nextstrain.org/) – clade asignment
 - [IQ-TREE](http://www.iqtree.org/) – Phylogenetic analysis
 - [MultiQC](https://multiqc.info/) – Aggregated QC reporting
 - Standard UNIX utilities: `awk`, `grep`, `tr`, `wc`
@@ -220,11 +220,8 @@ Logs capture runtime, errors, and pipeline decisions.
 
 ## Authors
 
-Betselot Zerihun Ayano
-GitHub: @betselotz
-
-Melak Getu Bire
-GitHub: MelakG13
+- **Betselot Zerihun Ayano** – [GitHub @betselotz](https://github.com/betselotz)  
+- **Melak Getu Bire** – [GitHub @MelakG13](https://github.com/MelakG13)
 
 ## License
 
