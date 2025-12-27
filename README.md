@@ -262,10 +262,7 @@ The MARV-GEN repository includes scripts for advanced genomic analyses of the Ma
 - Maps SNPs to coding sequences (CDS) and reports amino acid changes.  
 - Outputs CSV/TSV tables for SNP positions and amino acid changes.
 
-**Outputs:**
-
-- `ethiopian_lineage_defining_snps_aa.csv`  
-- `ethiopian_snps_protein.tsv`  
+**Outputs:** `ethiopian_lineage_defining_snps_aa.csv`  and `ethiopian_snps_protein.tsv`  
 
 ---
 
@@ -277,9 +274,7 @@ The MARV-GEN repository includes scripts for advanced genomic analyses of the Ma
 - Computes observed nonsynonymous (N) and synonymous (S) substitutions.  
 - Estimates dN/dS (ω) per gene to detect selective pressures.
 
-**Outputs:**
-
-- `selective_pressure_analysis.csv`  
+**Outputs:**  `selective_pressure_analysis.csv`  
 - Console summary of genetic distance and diversity metrics.  
 
 ---
@@ -297,9 +292,7 @@ These scripts generate publication-quality visualizations to complement the anal
 - Shows coding sequences (CDS) as colored blocks with gene labels.  
 - Produces high-resolution PNG figure for manuscripts.
 
-**Output:**
-
-- `ethiopian_snp_genome_map_aa_pro.png`  
+**Output:** `ethiopian_snp_genome_map_aa_pro.png`  
 
 ---
 
@@ -312,9 +305,7 @@ These scripts generate publication-quality visualizations to complement the anal
 - Annotates bootstrap values and adds a temporal axis.  
 - Produces PDF, PNG, SVG, and EPS high-resolution figures.
 
-**Outputs:**
-
-- `MARV.A1_Bootstrap_Labeled_NoTitle_Tree.{pdf,png,svg,eps}`  
+**Outputs:** `MARV.A1_Bootstrap_Labeled_NoTitle_Tree.{pdf,png,svg,eps}`  
 
 
 ## Logging
