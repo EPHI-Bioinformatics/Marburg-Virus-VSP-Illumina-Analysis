@@ -12,7 +12,7 @@ This repository contains an analysis pipeline for processing Illumina sequencing
 - [Installation](#installation)
 - [Usage](#usage)
 - [Directory Structure](#directory-structure)
-- [Lineage-Defining SNPs Analysis](#Lineage-Defining SNPs Analysis)
+- [Lineage Defining SNPs Analysis](#Lineage-Defining SNPs Analysis)
 - [Visualization](#Visualization)
 - [Logging](#logging)
 - [Authors](#authors)
