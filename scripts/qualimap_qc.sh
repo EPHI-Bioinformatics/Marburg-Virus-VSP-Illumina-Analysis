@@ -4,7 +4,6 @@ set -euo pipefail
 ###############################################################################
 # Qualimap BAM QC Batch Script
 # Description: Perform BAM QC for all BAM files in mapping directory
-# Automatically activates conda environment, uses all available CPUs, and logs output
 ###############################################################################
 
 # -------- CPU AUTO-DETECTION --------
@@ -14,7 +13,7 @@ echo "🧠 Using $SAFE_THREADS threads for Qualimap"
 
 # -------- Project Directories --------
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MAP_DIR="$PROJECT_DIR/results/04_mapped_bam"
+MAP_DIR="$PROJECT_DIR/results/04_mapping_results/bam"
 QUALIMAP_DIR="$PROJECT_DIR/results/05_mapping_qc"
 LOG_DIR="$QUALIMAP_DIR/logs"
 
@@ -30,9 +29,15 @@ set -u
 for bam in "$MAP_DIR"/*.bam; do
     SAMPLE_NAME=$(basename "$bam" .bam)
     OUT_DIR="$QUALIMAP_DIR/$SAMPLE_NAME"
-    mkdir -p "$OUT_DIR"
-    
     LOG_FILE="$LOG_DIR/${SAMPLE_NAME}_qualimap.log"
+    
+    # Skip if sample already processed
+    if [ -d "$OUT_DIR" ] && [ -f "$OUT_DIR/qualimapReport.html" ]; then
+        echo -e " Skipping $SAMPLE_NAME, already processed."
+        continue
+    fi
+
+    mkdir -p "$OUT_DIR"
     
     echo -e "🔹 Running Qualimap on $SAMPLE_NAME..."
     echo -e "   Log file: $LOG_FILE"

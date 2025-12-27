@@ -10,7 +10,7 @@ COMPARE_DIR="$WORKDIR/reference_genomes/MARV_compare"
 SUMMARY_FILE="$COMPARE_DIR/selection_summary.tsv"
 TEMP_FILE="$COMPARE_DIR/selection_temp.tsv"
 
-MIN_LENGTH=18000  # Updated threshold
+MIN_LENGTH=18000  
 
 mkdir -p "$COMPARE_DIR"
 

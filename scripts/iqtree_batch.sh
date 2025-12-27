@@ -1,163 +1,77 @@
 #!/bin/bash
-set -euo pipefail
 
-# ========================================
-# IQ-TREE Phylogeny Pipeline (Robust)
-# ========================================
+# --- 1. SET PATHS ---
+REF_DIR="../reference_genomes/MARV_compare"
+CONSENSUS_DIR="../results/07_consensus"
+MSA_DIR="../results/10_msa"
+TREE_DIR="../results/11_phylogeny"
+METADATA="../metadata/all_seq_metadata.csv"
 
-# Reserve 2 cores for system, use rest
-THREADS=$(( $(nproc) > 2 ? $(nproc) - 2 : 1 ))
-echo "🧠 Using $THREADS threads for IQ-TREE"
+# Filenames
+COMBINED="$MSA_DIR/combined_marburg.fasta"
+ALIGNED_MAX="$MSA_DIR/marburg_aligned.fasta"
+ALIGNED_AUTO="$MSA_DIR/marburg_auto_aligned.fasta"
+TREE_FILE="$TREE_DIR/marburg_ml.treefile"
+TREE_CLEAN="$TREE_DIR/marburg_ml_clean.treefile"
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MSA_DIR="$PROJECT_DIR/results/11_msa"
-PHYLO_DIR="$PROJECT_DIR/results/12_phylogeny"
-CONS_DIR="$PROJECT_DIR/results/07_consensus"
-REF_DIR="$PROJECT_DIR/reference_genomes/MARV_compare"
-OUTGROUP="$PROJECT_DIR/reference_genomes/EF446131.1.fasta"
+# Create directories
+mkdir -p "$MSA_DIR"
+mkdir -p "$TREE_DIR"
 
-HOSTS=("human" "bat")
-MASTER_LOG="$PHYLO_DIR/master_iqtree_summary.log"
+# Initialize Conda
+source "$(conda info --base)/etc/profile.d/conda.sh"
 
-mkdir -p "$PHYLO_DIR"
-> "$MASTER_LOG"
+# --- 2. RUN MAFFT (MAX QUALITY) ---
+if [ -f "$ALIGNED_MAX" ]; then
+    echo ">>> Skipping MAFFT: Alignment file '$ALIGNED_MAX' already exists."
+else
+    echo ">>> Activating mafft_env..."
+    conda activate mafft_env
 
-# ========================================
-# RUN IQTREE FUNCTION
-# ========================================
-run_iqtree() {
+    echo ">>> Combining FASTA files..."
+    cat "$REF_DIR"/*.fasta "$CONSENSUS_DIR"/*.fa > "$COMBINED"
 
-    local host=$1
-    local msa_file="$MSA_DIR/$host/all_sequences_aligned.fasta"
+    echo ">>> Running High-Quality MSA (L-INS-i)..."
+    mafft --localpair --maxiterate 1000 --thread -1 "$COMBINED" > "$ALIGNED_MAX"
 
-    local phylo_host_dir="$PHYLO_DIR/$host"
-    local inter_dir="$phylo_host_dir/intermediates"
-    local log_file="$phylo_host_dir/iqtree_${host}_$(date +%Y%m%d_%H%M%S).log"
+    echo ">>> Running Auto MSA for comparison..."
+    mafft --auto --thread -1 "$COMBINED" > "$ALIGNED_AUTO"
+    
+    conda deactivate
+fi
 
-    mkdir -p "$phylo_host_dir" "$inter_dir"
+# --- 3. RUN IQ-TREE ---
+if [ -f "$TREE_FILE" ]; then
+    echo ">>> Skipping IQ-TREE: Tree file '$TREE_FILE' already exists."
+else
+    echo ">>> Activating iqtree_env..."
+    conda activate iqtree_env
 
-    echo "----------------------------------------"
-    echo "⚙️  Running IQ-TREE for host: $host"
-    echo "📂 Input MSA: $msa_file"
-    echo "📁 Output directory: $phylo_host_dir"
-    echo "----------------------------------------"
+    echo ">>> Running IQ-TREE Analysis..."
+    iqtree -s "$ALIGNED_MAX" \
+           -m MFP \
+           -o DQ447649.1 \
+           -B 1000 \
+           -T AUTO \
+           --prefix "$TREE_DIR/marburg_ml"
+    
+    conda deactivate
+fi
 
-    # ========================================
-    # 1. Validate MSA file exists
-    # ========================================
-    if [[ ! -s "$msa_file" ]]; then
-        echo "❌ ERROR: MSA file missing or empty for $host: $msa_file"
-        echo -e "$host\tERROR: missing MSA" >> "$MASTER_LOG"
-        return 1
-    fi
+# --- 4. CLEAN TREE TIP NAMES TO MATCH METADATA ---
+if [ -f "$TREE_CLEAN" ]; then
+    echo ">>> Skipping tree cleaning: '$TREE_CLEAN' already exists."
+else
+    echo ">>> Cleaning tree tip names to match metadata..."
+    # Remove trailing underscores before branch lengths (common cause of TreeTime mismatches)
+    sed -E 's/(_)+(:)/\2/g' "$TREE_FILE" > "$TREE_CLEAN"
+    echo ">>> Cleaned tree saved as: $TREE_CLEAN"
+fi
 
-    # ========================================
-    # 2. Check for consensus sequences
-    # ========================================
-    CONS_SEQ_FILES=$(find "$CONS_DIR" -name "*$host*.fa" -size +0 | sort)
-    for f in $CONS_SEQ_FILES; do
-        HEADER=$(head -n 1 "$f" | sed 's/>//')
-        if ! grep -q "$HEADER" "$msa_file"; then
-            echo "⚠️ WARNING: Consensus sequence '$HEADER' from $f missing in MSA!"
-        fi
-    done
-
-    # Check outgroup
-    OUTGROUP_HEADER=$(head -n1 "$OUTGROUP" | sed 's/>//')
-    if ! grep -q "$OUTGROUP_HEADER" "$msa_file"; then
-        echo "⚠️ WARNING: Outgroup sequence '$OUTGROUP_HEADER' missing in MSA!"
-    fi
-
-    # ========================================
-    # 3. Count sequences BEFORE tree building
-    # ========================================
-    local seq_count
-    seq_count=$(grep -c "^>" "$msa_file")
-
-    echo "📊 Sequence count for $host: $seq_count"
-
-    if (( seq_count < 3 )); then
-        echo "❌ ERROR: Not enough sequences for phylogeny (minimum is 3)."
-        echo -e "$host\tERROR: insufficient sequences" >> "$MASTER_LOG"
-        return 1
-    fi
-
-    # ========================================
-    # 4. Ensure IQ-TREE is installed
-    # ========================================
-    IQTREE_EXEC=$(which iqtree3 || true)
-
-    if [[ -z "$IQTREE_EXEC" ]]; then
-        echo "❌ ERROR: iqtree3 not found in PATH"
-        echo -e "$host\tERROR: iqtree3 missing" >> "$MASTER_LOG"
-        return 1
-    fi
-
-    # ========================================
-    # 5. Run IQ-TREE
-    # ========================================
-    echo "🚀 Starting IQ-TREE (ModelFinder + 1000 ultrafast bootstraps)..."
-
-    "$IQTREE_EXEC" \
-        -s "$msa_file" \
-        -m MFP \
-        -bb 1000 \
-        -nt "$THREADS" \
-        -pre "$phylo_host_dir/${host}" \
-        2>&1 | tee "$log_file"
-
-    echo "✅ IQ-TREE finished for $host"
-
-    # ========================================
-    # 6. Validate tree output
-    # ========================================
-    local tree_file="$phylo_host_dir/${host}.treefile"
-    if [[ ! -s "$tree_file" ]]; then
-        echo "❌ ERROR: Treefile missing for $host"
-        echo -e "$host\tERROR: no treefile" >> "$MASTER_LOG"
-        return 1
-    fi
-
-    # ========================================
-    # 7. Move intermediate files cleanly
-    # ========================================
-    echo "📦 Organizing intermediate files..."
-    for f in "$phylo_host_dir"/*; do
-        [[ "$f" == "$tree_file" ]] && continue
-        [[ "$f" == "$log_file" ]] && continue
-        mv "$f" "$inter_dir/" 2>/dev/null || true
-    done
-
-    # ========================================
-    # 8. Write Host Summary
-    # ========================================
-    local file_size
-    file_size=$(stat -c%s "$tree_file")
-
-    {
-        echo "Host: $host"
-        echo "Sequences: $seq_count"
-        echo "Tree file: $tree_file"
-        echo "Tree size (bytes): $file_size"
-        echo "Log file: $log_file"
-        echo "Date: $(date)"
-    } > "$phylo_host_dir/${host}_summary.log"
-
-    echo -e "$host\t$tree_file\t$file_size\t$log_file\t$seq_count" >> "$MASTER_LOG"
-
-    echo "📝 Summary written for $host"
-    echo "----------------------------------------"
-}
-
-
-# ========================================
-# RUN ALL HOSTS IN PARALLEL
-# ========================================
-for host in "${HOSTS[@]}"; do
-    run_iqtree "$host" &
-done
-wait
-
-echo "🎉 All host-specific IQ-TREE phylogenies completed!"
-echo "🗂 Master summary log: $MASTER_LOG"
+echo "------------------------------------------------"
+echo "PROCESS CHECK COMPLETE"
+echo "Alignment:      $ALIGNED_MAX"
+echo "Tree File:      $TREE_FILE"
+echo "Clean Tree:     $TREE_CLEAN"
+echo "------------------------------------------------"
 

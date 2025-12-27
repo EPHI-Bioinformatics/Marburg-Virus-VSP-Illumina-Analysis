@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BAM_DIR="$PROJECT_DIR/results/04_mapped_bam"
+BAM_DIR="$PROJECT_DIR/results/04_mapping_results/bam/"
 CONS_DIR="$PROJECT_DIR/results/07_consensus"
 COVERAGE_DIR="$PROJECT_DIR/results/08_coverage"
 mkdir -p "$COVERAGE_DIR"

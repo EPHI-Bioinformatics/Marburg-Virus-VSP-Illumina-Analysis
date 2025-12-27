@@ -1,10 +1,11 @@
+
 #!/bin/bash
 set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NONHOST_DIR="$BASE_DIR/results/03_nonhuman_reads"
-BAM_DIR="$BASE_DIR/results/04_mapped_bam"
-REFERENCE="$BASE_DIR/reference_genomes/Marburg_reference.fasta"
+BAM_DIR="$BASE_DIR/results/04_mapping_results/bam"
+REFERENCE="$BASE_DIR/reference_genomes/marburg_reference.fasta"
 REFERENCE_PREFIX="${REFERENCE%.fasta}"
 
 LOG_FILE="$BASE_DIR/pipeline_mapping_log_$(date +%Y%m%d_%H%M%S).txt"

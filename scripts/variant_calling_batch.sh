@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BAM_DIR="$PROJECT_DIR/results/04_mapped_bam"
+BAM_DIR="$PROJECT_DIR/results/04_mapping_results/bam"
 VAR_DIR="$PROJECT_DIR/results/06_variants"
 MARBURG_REFERENCE="$PROJECT_DIR/reference_genomes/Marburg_reference.fasta"
 

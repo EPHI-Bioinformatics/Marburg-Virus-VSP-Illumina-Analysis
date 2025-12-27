@@ -16,9 +16,10 @@ HUMAN_REF_DIR="$PROJECT_DIR/reference_genomes"
 reference_genome="$HUMAN_REF_DIR/GCA_000001405.28_GRCh38.p13_genomic.fna"
 index_prefix="$HUMAN_REF_DIR/human_index"
 
+# Silence Conda initialization warnings
 set +u
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate host_removal_env
+source "$(conda info --base)/etc/profile.d/conda.sh" 2>/dev/null
+conda activate host_removal_env 2>/dev/null
 set -u
 
 # Check Bowtie2 index
@@ -76,8 +77,9 @@ else
             out2="$NON_HOST_READS_DIR/${sample}_2.nonhost.fastq.gz"
             tmp_prefix="$SAMPLE_ALIGNMENT_DIR/${sample}_tmp_unmapped"
 
-            echo "Processing $sample"
+            echo "Processing Sample $sample"
 
+            # We redirect Bowtie2's stderr only to the log file, not the terminal
             bowtie2 \
                 --very-sensitive-local \
                 --score-min L,0,-0.6 \
@@ -88,8 +90,8 @@ else
                 -p "$THREADS" \
                 --un-conc "$tmp_prefix" \
                 -S - \
-                2> >(tee "$SAMPLE_ALIGNMENT_DIR/${sample}_bowtie2.log" >&2) \
-            | samtools view -@ "$THREADS" -bS - > "$bam"
+                2> "$SAMPLE_ALIGNMENT_DIR/${sample}_bowtie2.log" \
+            | samtools view -@ "$THREADS" -bS - 2>/dev/null > "$bam"
 
             if [[ $? -ne 0 ]]; then
                 echo "Error mapping $sample"
@@ -98,11 +100,11 @@ else
                 continue
             fi
 
-            gzip -c "${tmp_prefix}.1" > "$out1"
-            gzip -c "${tmp_prefix}.2" > "$out2"
+            gzip -c "${tmp_prefix}.1" > "$out1" 2>/dev/null
+            gzip -c "${tmp_prefix}.2" > "$out2" 2>/dev/null
             rm -f "${tmp_prefix}.1" "${tmp_prefix}.2"
 
-            samtools flagstat -@ "$THREADS" "$bam" > "$flagstat"
+            samtools flagstat -@ "$THREADS" "$bam" > "$flagstat" 2>/dev/null
 
             PROCESSED_SAMPLES=$((PROCESSED_SAMPLES + 1))
         done
@@ -115,4 +117,3 @@ echo "Processed: $PROCESSED_SAMPLES"
 echo "Skipped:   $SKIPPED_SAMPLES"
 echo "Failed:    $FAILED_SAMPLES"
 echo "Done."
-

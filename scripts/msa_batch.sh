@@ -1,100 +1,88 @@
 #!/bin/bash
 set -euo pipefail
 
-# ========================================
-# Fast MAFFT Batch Alignment Pipeline
-# ========================================
+# -------------------------------------------------
+# CONFIGURATION
+# -------------------------------------------------
 
-# ------------------------
-# Config
-# ------------------------
-THREADS=$(nproc)  # use all available CPU cores
-BASE_DIR="/media/betselotz/Expansion/MARG2"
-CONS_DIR="$BASE_DIR/results/07_consensus"
+# Using the absolute path to ensure accuracy regardless of execution directory
+BASE_DIR="/media/betselotz/Expansion/MARV-Gen"
 REF_DIR="$BASE_DIR/reference_genomes/MARV_compare"
-MSA_BASE="$BASE_DIR/results/11_msa"
-OUTGROUP="$BASE_DIR/reference_genomes/EF446131.1.fasta"
+CONSENSUS_DIR="$BASE_DIR/results/07_consensus"
+OUTPUT_DIR="$BASE_DIR/results/10_msa"
 
-# Hosts to process
-HOSTS=("bat" "human")
+COMBINED="$OUTPUT_DIR/combined_marburg.fasta"
+ALIGNED_FINAL="$OUTPUT_DIR/marburg_aligned.fasta"
 
-# Master summary log
-MASTER_LOG="$MSA_BASE/master_summary.log"
-mkdir -p "$MSA_BASE"
-> "$MASTER_LOG"
+# MAFFT L-INS-i is highly accurate but memory-intensive.
+# Capping threads prevents memory crashes on high-core systems.
+MAX_MAFFT_THREADS=6
 
-echo "🧠 System Threads: $(nproc) | Using $THREADS threads for MAFFT"
-echo "🎯 Starting fast batch MAFFT pipeline..."
+# -------------------------------------------------
+# SETUP
+# -------------------------------------------------
 
-# ------------------------
-# Loop over hosts
-# ------------------------
-for HOST in "${HOSTS[@]}"; do
-    echo "----------------------------------------"
-    echo "⚙️ Processing host: $HOST"
+mkdir -p "$OUTPUT_DIR"
 
-    HOST_DIR="$MSA_BASE/$HOST"
-    mkdir -p "$HOST_DIR"
+CPU_DETECTED=$(nproc)
+THREADS=$(( CPU_DETECTED > MAX_MAFFT_THREADS ? MAX_MAFFT_THREADS : CPU_DETECTED ))
 
-    ALIGN_FILE="$HOST_DIR/all_sequences_aligned.fasta"
-    HOST_LOG="$HOST_DIR/${HOST}_summary.log"
-    > "$HOST_LOG"
+echo ">>> Detected CPU cores : $CPU_DETECTED"
+echo ">>> MAFFT threads used : $THREADS (capped for stability)"
 
-    # ------------------------
-    # Gather all sequences
-    # ------------------------
-    SEQ_LIST=$(find "$REF_DIR/$HOST/cleaned/" -name "*.fasta" -size +0 | sort)
+# Initialize Conda
+CONDA_PATH=$(conda info --base)
+source "$CONDA_PATH/etc/profile.d/conda.sh"
+conda activate mafft_env
 
-    # Include all consensus sequences (fix for missing consensus)
-    CONS_SEQ=$(find "$CONS_DIR" -name "*.fa" -size +0 | sort)
+# -------------------------------------------------
+# STEP 1: COMBINE FASTA FILES
+# -------------------------------------------------
 
-    ALL_INPUT="$HOST_DIR/all_sequences_raw.fasta"
+if [ -s "$COMBINED" ]; then
+    echo ">>> Skipping FASTA combination (already exists): $COMBINED"
+else
+    echo ">>> Combining reference and consensus FASTA files..."
+    
+    # nullglob prevents errors if one extension (e.g., .fa) isn't found
+    shopt -s nullglob
+    cat "$REF_DIR"/*.{fasta,fa,fna} "$CONSENSUS_DIR"/*.{fasta,fa,fna} > "$COMBINED"
+    shopt -u nullglob
 
-    # Concatenate sequences + outgroup
-    cat $SEQ_LIST $CONS_SEQ "$OUTGROUP" > "$ALL_INPUT"
+    if [ ! -s "$COMBINED" ]; then
+        echo "❌ ERROR: No FASTA files found in $REF_DIR or $CONSENSUS_DIR"
+        exit 1
+    fi
+fi
 
-    # Make headers unique
-    awk '/^>/{print ">"$0"_"NR; next}{print}' "$ALL_INPUT" > "$ALL_INPUT.unique"
-    mv "$ALL_INPUT.unique" "$ALL_INPUT"
+# -------------------------------------------------
+# STEP 2: MAFFT L-INS-i ALIGNMENT (Most Accurate)
+# -------------------------------------------------
 
-    # ------------------------
-    # Dry-run: show what will be aligned
-    # ------------------------
-    echo "📋 Dry-run: sequences to be aligned for $HOST:"
-    grep "^>" "$ALL_INPUT" | sed 's/>//'
-    TOTAL_SEQ=$(grep -c "^>" "$ALL_INPUT")
-    echo "✅ Total sequences for $HOST: $TOTAL_SEQ"
+if [ -s "$ALIGNED_FINAL" ]; then
+    echo ">>> Skipping MAFFT alignment (already exists): $ALIGNED_FINAL"
+else
+    echo ">>> Running MAFFT L-INS-i (Most Accurate Strategy)..."
 
-    # ------------------------
-    # Run MAFFT (fast & safe)
-    # ------------------------
-    echo "🔥 Running MAFFT --auto for $HOST..."
-    mafft --thread "$THREADS" --auto "$ALL_INPUT" > "$ALIGN_FILE"
-    echo "✅ MAFFT alignment complete: $ALIGN_FILE"
+    # --localpair + --maxiterate 1000 activates the L-INS-i algorithm
+    mafft \
+      --localpair \
+      --maxiterate 1000 \
+      --thread "$THREADS" \
+      "$COMBINED" > "$ALIGNED_FINAL" || {
+        echo "❌ ERROR: MAFFT L-INS-i failed."
+        exit 1
+      }
 
-    # ------------------------
-    # Host summary log
-    # ------------------------
-    NUM_SEQ_ALIGNED=$(grep -c "^>" "$ALIGN_FILE")
-    FILE_SIZE=$(stat -c%s "$ALIGN_FILE")
-    {
-        echo "Host: $HOST"
-        echo "Reference files: $(echo $SEQ_LIST | wc -w)"
-        echo "Consensus files: $(echo $CONS_SEQ | wc -w)"
-        echo "Outgroup: $(basename $OUTGROUP)"
-        echo "Input sequences: $TOTAL_SEQ"
-        echo "Aligned sequences: $NUM_SEQ_ALIGNED"
-        echo "Output file size (bytes): $FILE_SIZE"
-        echo "Output file: $ALIGN_FILE"
-        echo "Date: $(date)"
-    } > "$HOST_LOG"
-    echo "📝 Host summary logged: $HOST_LOG"
+    if [ ! -s "$ALIGNED_FINAL" ]; then
+        echo "❌ ERROR: Alignment output is empty!"
+        exit 1
+    fi
+fi
 
-    # Append to master summary
-    echo -e "$HOST\t$NUM_SEQ_ALIGNED\t$FILE_SIZE\t$ALIGN_FILE" >> "$MASTER_LOG"
+conda deactivate
 
-done
-
-echo "🎉 All host-specific MAFFT alignments completed!"
-echo "🗂 Master summary log: $MASTER_LOG"
-
+echo "------------------------------------------------"
+echo "MSA PIPELINE COMPLETE"
+echo "Final alignment: $ALIGNED_FINAL"
+echo "------------------------------------------------"
