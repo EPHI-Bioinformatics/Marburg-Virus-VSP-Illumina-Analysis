@@ -1,3 +1,9 @@
 
 # Conda environments
 # envs/
+
+# Local MARV pipeline extensions (EPHI / site-specific)
+envs/*.yaml
+scripts/*.sh
+scripts/*.py
+scripts/README.md
