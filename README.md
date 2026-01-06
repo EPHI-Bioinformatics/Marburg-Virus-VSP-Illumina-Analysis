@@ -132,16 +132,16 @@ conda create -n multiqc_env -c bioconda -y multiqc
 All required environments can be created automatically using the YAML files provided in the envs/ directory:
 ```bash
 cd envs/
-conda env create -f fastp_env.yml
-conda env create -f host_removal_env.yml
-conda env create -f mapping_env.yml
-conda env create -f qualimap_env.yml
-conda env create -f ivar_env.yml
-conda env create -f mafft_env.yml
-conda env create -f nextclade_env.yml
-conda env create -f iqtree_env.yml
-conda env create -f treetime_env.yml
-conda env create -f multiqc_env.yml
+conda env create -f fastp_env.yaml
+conda env create -f host_removal_env.yaml
+conda env create -f mapping_env.yaml
+conda env create -f qualimap_env.yaml
+conda env create -f ivar_env.yaml
+conda env create -f mafft_env.yaml
+conda env create -f nextclade_env.yaml
+conda env create -f iqtree_env.yaml
+conda env create -f treetime_env.yaml
+conda env create -f multiqc_env.yaml
 ```
 
 3. Prepare input directories:
