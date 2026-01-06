@@ -87,6 +87,7 @@ git clone https://github.com/betselotz/Marburg-Virus-VSP-Illumina-Analysis.git
 cd Marburg-Virus-VSP-Illumina-Analysis
 ```
 2. Create required Conda environments:
+ 
  I. FastQ Quality Control (fastp)
 ```bash
 conda create -n fastp_env -c bioconda -y fastp
