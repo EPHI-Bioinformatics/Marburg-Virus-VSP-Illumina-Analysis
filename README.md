@@ -63,10 +63,10 @@ The pipeline uses the following software tools:
 - [Git](https://git-scm.com/)
 - [Conda](https://docs.conda.io/en/latest/)
 - [fastp](https://github.com/OpenGene/fastp) – Quality control of FASTQ reads
-- [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) – Host read removal
+- [hostile](https://github.com/bede/hostile) – Host read removal
 - [samtools](http://www.htslib.org/) – BAM/SAM manipulation
 - [iVar](https://andersen-lab.github.io/ivar/html/) – Variant calling and consensus generation
-- [minimap2](https://github.com/lh3/minimap2) – Read mapping
+- [bwa](https://github.com/lh3/bwa) – Read mapping
 - [Qualimap](http://qualimap.bioinfo.cipf.es) – BAM QC
 - [MAFFT](https://mafft.cbrc.jp/alignment/software/) – Multiple sequence alignment
 - [Nextclade](https://clades.nextstrain.org/) – clade asignment
@@ -90,43 +90,43 @@ cd Marburg-Virus-VSP-Illumina-Analysis
  
  I. FastQ Quality Control (fastp)
 ```bash
-conda create -n fastp_env -c bioconda -y fastp
+conda create -n fastp_env -c conda-forge -c bioconda -y fastp
 ```
- II. Host Read Removal (Bowtie2)
+ II. Host Read Removal (hostile)
 ```bash
-conda create -n host_env -c bioconda -y bowtie2
+conda create -n host_env -c conda-forge -c bioconda -y hostile
 ```
- III. Mapping (Minimap2 + Samtools)
+ III. Mapping (bwa + Samtools)
 ```bash
-conda create -n mapping_env -c bioconda -y minimap2 samtools
+conda create -n mapping_env -c conda-forge -c bioconda -y bwa samtools
 ```
 IV. BAM QC (Qualimap)
 ```bash
-conda create -n qualimap_env -c bioconda -y qualimap
+conda create -n qualimap_env -c conda-forge -c bioconda -y qualimap
 ```
 V. Variant Calling & Consensus (iVar + Samtools)
 ```bash
-conda create -n ivar_env -c bioconda -y samtools ivar
+conda create -n ivar_env -c conda-forge -c bioconda -y samtools ivar
 ```
 VI. Multiple Sequence Alignment (MAFFT)
 ```bash
-conda create -n mafft_env -c bioconda -y mafft trimal
+conda create -n mafft_env -c conda-forge -c bioconda -y mafft trimal
 ```
 VII. Clade Identification (Nextclade)
 ```bash
-conda create -n nextclade_env -c bioconda -y nextclade
+conda create -n nextclade_env -c conda-forge -c bioconda -y nextclade
 ```
 VIII. Phylogenetic Analysis (IQ-TREE)
 ```bash
-conda create -n iqtree_env -c bioconda -y iqtree
+conda create -n iqtree_env -c conda-forge -c bioconda -y iqtree
 ```
 IX. Time-Resolved Phylogeny (TreeTime)
 ```bash
-conda create -n treetime_env -c bioconda -y treetime
+conda create -n treetime_env -c conda-forge -c bioconda -y treetime
 ```
 X. MultiQC Reporting
 ```bash
-conda create -n multiqc_env -c bioconda -y multiqc
+conda create -n multiqc_env -c conda-forge -c bioconda -y multiqc
 ```
 3. Automatic Environment Creation via YAML files (recommended):
 
