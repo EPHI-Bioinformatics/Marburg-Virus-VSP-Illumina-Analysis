@@ -111,42 +111,6 @@ for leaf in terminals:
         ax.text(x_coords[leaf] + extension_length + label_offset, y_coords[leaf], 
                 display_name, va='center', fontsize=16, fontweight='bold')
 
-# -------------------------------
-# 7. Bootstrap Labeling
-# -------------------------------
-ml_bootstraps = {frozenset(leaf.name for leaf in node.get_terminals()): node.confidence
-                 for node in ml_tree.get_nonterminals() if node.confidence is not None}
-
-target_group = ["KC545387.1", "KC545388.1", "JX458853.1", "JX458858.1", "JN408064.1", "EF446132.1"]
-mrca_node_080 = tree.common_ancestor(target_group)
-kc_pair_node = tree.common_ancestor(["KC545387.1", "KC545388.1"])
-
-for node in tree.get_nonterminals():
-    leaf_names = [leaf.name for leaf in node.get_terminals()]
-    l_set = frozenset(leaf_names)
-    node_x = x_coords[node]
-    raw_val = None
-
-    if node == mrca_node_080:
-        raw_val = 0.80
-    elif node == kc_pair_node:
-        raw_val = ml_bootstraps.get(l_set) or getattr(node, 'confidence', None)
-    elif l_set in ml_bootstraps:
-        raw_val = ml_bootstraps[l_set]
-    elif hasattr(node, 'confidence') and node.confidence is not None:
-        raw_val = node.confidence
-
-    if raw_val is not None:
-        try:
-            val = float(raw_val)
-            display_val = val / 100 if val > 1.1 else val
-            is_ethiopian = any("ET_MARV" in leaf for leaf in leaf_names)
-            
-            ha, x_off = ('right', -0.2) if is_ethiopian else ('left', 0.1)
-            ax.text(node_x + x_off, y_coords[node] + 0.15, f"{display_val:.2g}", 
-                    fontsize=12, fontweight='bold', ha=ha, va='bottom', zorder=25)
-        except (ValueError, TypeError):
-            continue
 
 # -------------------------------
 # 8. Axis Formatting (X-Axis Removed)

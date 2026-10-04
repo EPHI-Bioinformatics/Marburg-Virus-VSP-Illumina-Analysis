@@ -5,11 +5,12 @@ import networkx as nx
 import matplotlib
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
+import seaborn as sns  # Added for heatmap
 from Bio import AlignIO
 from collections import defaultdict
 
 # ---------------------------------------------------------
-# 1. CALCULATION FUNCTION (exclude N for clustering)
+# 1. CALCULATION FUNCTION (exclude any non-ACGT for clustering)
 # ---------------------------------------------------------
 def calculate_snp_distance(alignment, min_frac=0.7):
     n = len(alignment)
@@ -18,23 +19,30 @@ def calculate_snp_distance(alignment, min_frac=0.7):
     full_dist = np.full((n, n), np.nan)
     callable_sites = np.zeros((n, n), dtype=int)
     
+    # Convert alignment to uppercase array for fast masking
+    seq_array = np.array([list(str(rec.seq).upper()) for rec in alignment])
+    
+    # Mask positions where any sample is not A/C/G/T
+    valid_mask = np.all(np.isin(seq_array, ["A", "C", "G", "T"]), axis=0)
+    
     for i in range(n):
-        s1 = np.array(list(str(alignment[i].seq).upper()))
-        callable_sites[i, i] = np.sum((s1 != "-") & (s1 != "N"))
+        s1 = seq_array[i]
+        callable_sites[i, i] = np.sum(valid_mask)
         for j in range(i + 1, n):
-            s2 = np.array(list(str(alignment[j].seq).upper()))
-            mask = ((s1 != "-") & (s2 != "-") & (s1 != "N") & (s2 != "N"))
-            n_callable = np.sum(mask)
+            s2 = seq_array[j]
+            # Only consider positions valid in the entire alignment
+            pair_mask = valid_mask
+            n_callable = np.sum(pair_mask)
             callable_sites[i, j] = callable_sites[j, i] = n_callable
             
             if n_callable > 0 and (n_callable / genome_len) >= min_frac:
-                snps = np.sum(s1[mask] != s2[mask])
+                snps = np.sum(s1[pair_mask] != s2[pair_mask])
                 full_dist[i, j] = full_dist[j, i] = snps
-            else:
-                full_dist[i, j] = full_dist[j, i] = np.nan
 
-    return (pd.DataFrame(full_dist, index=ids, columns=ids), 
-            pd.DataFrame(callable_sites, index=ids, columns=ids))
+    return (
+        pd.DataFrame(full_dist, index=ids, columns=ids),
+        pd.DataFrame(callable_sites, index=ids, columns=ids)
+    )
 
 # ---------------------------------------------------------
 # 2. EXECUTION & CSV EXPORT
@@ -43,7 +51,6 @@ MSA_FILE = "../results/10_msa/Ethiopian_only/ethiopian_only_msa.fasta"
 OUT_DIR = "../results/transmission_dynamics"
 os.makedirs(OUT_DIR, exist_ok=True)
 
-SNP_THRESHOLD = 2
 MIN_CALLABLE_FRAC = 0.5  # Treat samples <50% callable as low-quality
 
 alignment = AlignIO.read(MSA_FILE, "fasta")
@@ -64,23 +71,40 @@ snp_df.to_csv(f"{OUT_DIR}/pairwise_snp_distances.csv")
 callable_df.to_csv(f"{OUT_DIR}/pairwise_callable_sites.csv")
 
 # ---------------------------------------------------------
-# 3. CLUSTER DETECTION
+# 3. BUILD MINIMUM SPANNING TREE
 # ---------------------------------------------------------
-G_cluster = nx.Graph()
-G_cluster.add_nodes_from(snp_df.index)
+G_full = nx.Graph()
+G_full.add_nodes_from(snp_df.index)
 
 for i in range(len(snp_df)):
     for j in range(i + 1, len(snp_df)):
-        if not np.isnan(snp_df.iloc[i,j]) and snp_df.iloc[i,j] <= SNP_THRESHOLD:
-            G_cluster.add_edge(snp_df.index[i], snp_df.index[j])
+        d = snp_df.iloc[i, j]
+        if not np.isnan(d):
+            G_full.add_edge(snp_df.index[i], snp_df.index[j], weight=int(d))
 
-clusters = list(nx.connected_components(G_cluster))
+# Minimum spanning tree
+G_mst = nx.minimum_spanning_tree(G_full, weight="weight")
+
+# Export MST edges
+mst_edges = []
+for u, v, d in G_mst.edges(data=True):
+    mst_edges.append([u, v, d["weight"]])
+
+pd.DataFrame(
+    mst_edges,
+    columns=["Sample_1", "Sample_2", "SNP_Distance"]
+).to_csv(f"{OUT_DIR}/mst_edges.csv", index=False)
+
+# ---------------------------------------------------------
+# 4. ASSIGN GROUP IDs BASED ON MST CONNECTIVITY
+# ---------------------------------------------------------
+clusters = list(nx.connected_components(G_mst))
 cluster_nodes_map = {}
 for idx, cluster in enumerate(clusters):
     for node in cluster:
         cluster_nodes_map[node] = idx
 
-# Assign Group IDs to every node
+# Assign Group IDs
 node_group_ids = []
 current_singleton_id = len(clusters)
 for node in snp_df.index:
@@ -99,74 +123,128 @@ plot_node_colors = [
 ]
 
 # ---------------------------------------------------------
-# 4. transmission_clusters.csv
+# 5. transmission_clusters.csv
 # ---------------------------------------------------------
 cluster_export = []
 for i, node in enumerate(snp_df.index):
     label = f"Cluster_{node_group_ids[i]}" if node in cluster_nodes_map else "Singleton"
     cluster_export.append([node, label])
+
 pd.DataFrame(cluster_export, columns=["Sample_ID", "Cluster_ID"]).to_csv(
     f"{OUT_DIR}/transmission_clusters.csv", index=False
 )
 
 # ---------------------------------------------------------
-# 5. cluster_size_summary.csv
+# 6. cluster_size_summary.csv
 # ---------------------------------------------------------
 summary = defaultdict(int)
 for c in clusters:
     summary[len(c)] += 1
+
 pd.DataFrame(
     list(summary.items()),
     columns=["Cluster_Size", "Number_of_Clusters"]
 ).to_csv(f"{OUT_DIR}/cluster_size_summary.csv", index=False)
 
-# ---------------------------------------------------------
-# 6. VISUALIZATION
-# ---------------------------------------------------------
-G = nx.Graph()
-G.add_nodes_from(snp_df.index)
-for i in range(len(snp_df)):
-    for j in range(i + 1, len(snp_df)):
-        d = snp_df.iloc[i, j]
-        if not np.isnan(d):
-            G.add_edge(
-                snp_df.index[i],
-                snp_df.index[j],
-                snp=int(d),
-                length=1 + d
-            )
+# --- Section 7: VISUALIZATION (Full Network) ---
 
-pos = nx.kamada_kawai_layout(G, weight='length')
+pos = nx.circular_layout(G_full)  # Circular layout for the full network
 
-# Shift cluster 0 nodes slightly to the right
-cluster_0_nodes = [node for node, gid in zip(snp_df.index, node_group_ids) if gid == 0]
-for node in pos:
-    if node in cluster_0_nodes:
-        pos[node][0] += 0.5
+plt.figure(figsize=(14, 14))
 
-plt.figure(figsize=(18, 18))
-
-# Draw edges
-nx.draw_networkx_edges(G, pos, width=1.2, edge_color="gray", alpha=0.2)
-triangle_edges = [(u, v) for u, v in G.edges() if u in cluster_0_nodes and v in cluster_0_nodes]
-nx.draw_networkx_edges(G, pos, edgelist=triangle_edges, width=4.5, edge_color="black")
-
-# Draw nodes
-nx.draw_networkx_nodes(G, pos, node_size=9000, node_color=plot_node_colors, edgecolors="black", linewidths=2.5)
-nx.draw_networkx_labels(G, pos, font_size=10, font_weight="bold")
-
-# Draw SNP edge labels
-edge_labels = nx.get_edge_attributes(G, 'snp')
-nx.draw_networkx_edge_labels(
-    G, pos, edge_labels=edge_labels,
-    font_color='black', font_size=15, font_weight='bold',
-    label_pos=0.5, rotate=False,
-    bbox=dict(facecolor='white', alpha=0.9, edgecolor='none', boxstyle='round,pad=0.3')
+# Draw all edges
+nx.draw_networkx_edges(
+    G_full, pos, 
+    width=1.5, 
+    edge_color="gray", 
+    alpha=0.3, 
+    style='dashed'
 )
 
-plt.title("Marburg Virus Transmission Cluster Analysis", fontsize=26, pad=30)
+# Draw nodes
+nx.draw_networkx_nodes(
+    G_full, pos,
+    node_size=8000,
+    node_color=plot_node_colors,
+    edgecolors="black",
+    linewidths=2
+)
+
+# Draw labels
+nx.draw_networkx_labels(G_full, pos, font_size=10, font_weight="bold")
+
+# Draw SNP labels for EVERY edge
+edge_labels = nx.get_edge_attributes(G_full, "weight")
+nx.draw_networkx_edge_labels(
+    G_full, pos,
+    edge_labels=edge_labels,
+    font_size=9,
+    label_pos=0.3, 
+    bbox=dict(facecolor="white", alpha=0.7, edgecolor="none")
+)
+
+plt.title("Full Pairwise SNP Distances: Marburg Outbreak Connectivity", fontsize=20)
 plt.axis("off")
-plt.savefig(f"{OUT_DIR}/marburg_triangular_clusters.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{OUT_DIR}/marburg_complete_network.png", dpi=300, bbox_inches="tight")
 
-print(f"✅ Success! Generated plot and all CSVs (including low-quality singletons) in {OUT_DIR}")
+# ---------------------------------------------------------
+# 7.5 VISUALIZATION: CLUSTERED HEATMAP
+# ---------------------------------------------------------
+heatmap_df = snp_df.copy()
+np.fill_diagonal(heatmap_df.values, 0) # Ensure diagonal is 0 for clustering
 
+# If NaNs exist (e.g. from low-quality samples), fill with max+5 to separate them
+if heatmap_df.isna().any().any():
+    fill_val = heatmap_df.max().max() + 5
+    heatmap_df = heatmap_df.fillna(fill_val)
+
+g = sns.clustermap(
+    heatmap_df,
+    annot=True, 
+    fmt=".0f", 
+    cmap="YlOrRd", 
+    linewidths=.5,
+    figsize=(12, 10),
+    cbar_kws={'label': 'SNP Distance'}
+)
+g.fig.suptitle('Clustered Heatmap of Marburg Virus Pairwise SNP Distances', fontsize=18, y=1.02)
+plt.savefig(f"{OUT_DIR}/marburg_snp_heatmap.png", dpi=300, bbox_inches="tight")
+
+# ---------------------------------------------------------
+# 8. GENERATE SNP DIFFERENCE TABLE (strict ACGT mask)
+# ---------------------------------------------------------
+snp_diff_records = []
+
+seq_array = np.array([list(str(rec.seq).upper()) for rec in alignment])
+ids = [rec.id for rec in alignment]
+
+valid_mask = np.all(np.isin(seq_array, ["A", "C", "G", "T"]), axis=0)
+alignment_len = alignment.get_alignment_length()
+
+for i in range(len(alignment)):
+    s1_id = ids[i]
+    s1_seq = seq_array[i]
+    
+    for j in range(i + 1, len(alignment)):
+        s2_id = ids[j]
+        s2_seq = seq_array[j]
+        
+        diff_positions = np.where((s1_seq != s2_seq) & valid_mask)[0]
+        
+        for pos in diff_positions:
+            snp_diff_records.append([
+                s1_id,
+                s2_id,
+                pos + 1,        # 1-based genome position
+                s1_seq[pos],
+                s2_seq[pos]
+            ])
+
+# Export SNP differences
+snp_diff_df = pd.DataFrame(
+    snp_diff_records,
+    columns=["Sample_1", "Sample_2", "Position", "Sample_1_Base", "Sample_2_Base"]
+)
+
+snp_diff_df.to_csv(f"{OUT_DIR}/pairwise_snp_differences.csv", index=False)
+print(f"✅ SNP differences and Heatmap saved to {OUT_DIR}")

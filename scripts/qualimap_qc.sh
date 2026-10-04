@@ -4,6 +4,7 @@ set -euo pipefail
 ###############################################################################
 # Qualimap BAM QC Batch Script
 # Description: Perform BAM QC for all BAM files in mapping directory
+# Automatically activates conda environment, uses all available CPUs, and logs output
 ###############################################################################
 
 # -------- CPU AUTO-DETECTION --------

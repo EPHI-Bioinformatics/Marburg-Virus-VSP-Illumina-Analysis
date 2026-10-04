@@ -29,8 +29,12 @@ RAW_DIR="$PROJECT_DIR/raw_reads"
 RESULTS_DIR="$PROJECT_DIR/results"
 FASTP_QC_DIR="$RESULTS_DIR/01_fastp"
 CLEAN_FASTQ_DIR="$RESULTS_DIR/02_clean_reads"
+DROP_LOG="$CLEAN_FASTQ_DIR/fastp_zero_reads_dropped.csv"
 
 mkdir -p "$FASTP_QC_DIR" "$CLEAN_FASTQ_DIR"
+
+# Initialize/Clear the dropped samples log
+echo "sample_name,reason" > "$DROP_LOG"
 
 # ----------------------- Main Loop ----------------------------
 while read -r fq1; do
@@ -46,8 +50,19 @@ while read -r fq1; do
     json="$FASTP_QC_DIR/${sample}.fastp.json"
     log="$FASTP_QC_DIR/${sample}.fastp.log"
 
-    [[ -f "$fq2" ]] || { echo "Missing R2 for $sample. Skipping."; continue; }
-    [[ -s "$fq1" && -s "$fq2" ]] || { echo "Empty file in $sample. Skipping."; continue; }
+    # Check for missing R2
+    if [[ ! -f "$fq2" ]]; then
+        echo "$sample,missing_R2" >> "$DROP_LOG"
+        echo "Missing R2 for $sample. Skipping."
+        continue
+    fi
+
+    # Check for empty files (Zero reads)
+    if [[ ! -s "$fq1" || ! -s "$fq2" ]]; then
+        echo "$sample,empty_fastq" >> "$DROP_LOG"
+        echo "Empty file detected for $sample. Dropped."
+        continue
+    fi
 
     fq1_size=$(stat -c%s "$fq1")
     fq2_size=$(stat -c%s "$fq2")
@@ -89,4 +104,4 @@ done < <(find "$RAW_DIR" -maxdepth 1 -name "*_R1*.fastq*")
 echo "--- fastp QC: Completed ---"
 echo "Processed: $PROCESSED_SAMPLES"
 echo "Failed:    $FAILED_SAMPLES"
-
+echo "Dropped samples logged to: $DROP_LOG"
