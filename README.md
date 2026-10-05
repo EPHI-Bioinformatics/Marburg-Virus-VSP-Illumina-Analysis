@@ -353,7 +353,6 @@ Bayesian phylodynamic analysis is performed with **BEAST** using tip dates from 
 - `marv.trees` — posterior trees  
 - MCC / annotated time tree and figures after post-processing  
 
-**Note:** TreeTime scripts (e.g. `treetime_vis_2_MARV.A.1.py`) are retained in `scripts/` for legacy use but are no longer part of the primary reported analysis.  
 
 
 ## Logging

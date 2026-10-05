@@ -1,7 +1,0 @@
-name: treetime_env
-channels:
-  - bioconda
-  - conda-forge
-  - defaults
-dependencies:
-  - treetime=0.7.3

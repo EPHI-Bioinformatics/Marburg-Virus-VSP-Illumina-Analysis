@@ -1,0 +1,14 @@
+Oct-04 15:03:04.428 [main] DEBUG nextflow.cli.Launcher - $> nextflow run main.nf -profile conda --input samplesheet.csv --host_index /path/to/human_bowtie2_index --outdir results
+Oct-04 15:03:04.481 [main] DEBUG nextflow.cli.CmdRun - N E X T F L O W  ~  version 24.10.4
+Oct-04 15:03:04.511 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/home/betselotz/.nextflow/plugins; core-plugins: nf-amazon@2.9.2,nf-azure@1.10.2,nf-cloudcache@0.4.2,nf-codecommit@0.2.2,nf-console@1.1.4,nf-google@1.15.3,nf-tower@1.9.3,nf-wave@1.7.4
+Oct-04 15:03:04.536 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Oct-04 15:03:04.537 [main] INFO  o.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Oct-04 15:03:04.539 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.12.0 in 'deployment' mode
+Oct-04 15:03:04.549 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Oct-04 15:03:04.563 [main] DEBUG nextflow.scm.ProviderConfig - Using SCM config path: /home/betselotz/.nextflow/scm
+Oct-04 15:03:04.574 [main] DEBUG nextflow.cli.Launcher - Operation aborted
+nextflow.exception.AbortOperationException: Cannot find script file: main.nf
+	at nextflow.cli.CmdRun.getScriptFile(CmdRun.groovy:536)
+	at nextflow.cli.CmdRun.run(CmdRun.groovy:325)
+	at nextflow.cli.Launcher.run(Launcher.groovy:503)
+	at nextflow.cli.Launcher.main(Launcher.groovy:658)
