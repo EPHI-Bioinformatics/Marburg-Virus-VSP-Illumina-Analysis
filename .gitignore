@@ -3,3 +3,9 @@
 
 # Local MARV pipeline extensions (EPHI / site-specific)
 envs/*.yaml
+.nextflow*
+work/
+results/
+*.log
+samplesheet.csv
+nf-marv-work/
