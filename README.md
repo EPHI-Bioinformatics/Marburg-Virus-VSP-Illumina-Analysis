@@ -1,7 +1,7 @@
 # 🧬 **`MARV-GEN`** - Marburg Virus Genome Analysis Pipeline
 ## Marburg Virus VSP Illumina Analysis Pipeline
 
-This repository contains an analysis pipeline for processing Illumina sequencing data of Marburg virus (MARV) samples. The workflow includes raw data quality control, host read removal, mapping, BAM QC, variant calling, consensus generation, coverage assessment, clade assignment, phylogenetic analysis, MultiQC reporting, and downstream genomic analyses including lineage-defining SNP identification, diversity metrics, selective pressure estimation, and publication-quality visualizations.
+This repository contains an analysis pipeline for processing Illumina sequencing data of Marburg virus (MARV) samples. The workflow includes raw data quality control, host read removal, mapping, BAM QC, variant calling, consensus generation, coverage assessment, clade assignment, phylogenetic analysis, MultiQC reporting, and downstream genomic analyses including lineage-defining SNP identification, diversity metrics, selective pressure estimation, Bayesian phylodynamics (BEAST), and publication-quality visualizations.
 
 ---
 
@@ -27,7 +27,7 @@ This pipeline automates the analysis of Illumina sequencing reads for Marburg vi
 - High-throughput batch processing
 - Flexible use of computational resources (multi-threaded)
 - Comprehensive logging for reproducibility
-- Integration with downstream analyses (phylogenetics, SNPs, diversity, dN/dS, genome visualization)
+- Integration with downstream analyses (phylogenetics, BEAST phylodynamics, SNPs, diversity, dN/dS, genome visualization)
 - Aggregated QC reporting using MultiQC
 
 ---
@@ -49,7 +49,7 @@ The workflow is organized into the following steps, each implemented as a batch 
 | 9    | `nextclade_batch.sh`        | Analyze clades using its own database.                                                                    |
 | 10   | `msa_batch.sh`              | Combines reference and consensus sequences, aligns with MAFFT, trims with trimAl, generates CSV metadata. |
 | 11   | `iqtree_batch.sh`           | Builds phylogenetic trees from MSA using IQ-TREE, restores original leaf names, and creates summary.      |
-| 11   | `treetime_batch.sh`         | Generates time-resolved phylogenies using TreeTime from IQ-TREE output.                                   |
+| 12   | `create_beast_xml.py` / `run_beast.sh` / `diagnose_beast.sh` / `process_beast_trees.sh` | Bayesian phylodynamics with BEAST (XML generation, MCMC run, convergence diagnostics, tree post-processing). |
 | 11   | `multiqc_batch.sh`          | Aggregates QC reports from Fastp, Qualimap, and Nextclade; filters Nextclade to selected samples.         |
 | 12   | `run_MARV-GEN_full_pipeline.sh` | Launches the entire workflow in sequence, handling intermediate directories and logging.              |
 
@@ -71,7 +71,8 @@ The pipeline uses the following software tools:
 - [MAFFT](https://mafft.cbrc.jp/alignment/software/) – Multiple sequence alignment
 - [Nextclade](https://clades.nextstrain.org/) – clade asignment
 - [IQ-TREE](http://www.iqtree.org/) – Phylogenetic analysis
-- [treetime](https://github.com/neherlab/treetime) – time-scaled phylogenies
+- [BEAST](https://beast.community/) – Bayesian phylodynamics and time-scaled trees
+- [Tracer](https://github.com/beast-dev/tracer) – MCMC convergence diagnostics (optional)
 - [MultiQC](https://multiqc.info/) – Aggregated QC reporting
 - Standard UNIX utilities: `awk`, `grep`, `tr`, `wc`
 
@@ -120,9 +121,9 @@ VIII. Phylogenetic Analysis (IQ-TREE)
 ```bash
 conda create -n iqtree_env -c conda-forge -c bioconda -y iqtree
 ```
-IX. Time-Resolved Phylogeny (TreeTime)
+IX. Bayesian Phylodynamics (BEAST)
 ```bash
-conda create -n treetime_env -c conda-forge -c bioconda -y treetime
+conda create -n beast_env -c bioconda -c conda-forge -y beast python biopython
 ```
 X. MultiQC Reporting
 ```bash
@@ -141,7 +142,7 @@ conda env create -f ivar_env.yaml
 conda env create -f mafft_env.yaml
 conda env create -f nextclade_env.yaml
 conda env create -f iqtree_env.yaml
-conda env create -f treetime_env.yaml
+conda env create -f envs/beast_env.yaml  # or: conda create -n beast_env -c bioconda -c conda-forge -y beast
 conda env create -f multiqc_env.yaml
 ```
 
@@ -151,14 +152,14 @@ raw_reads/                                 # Raw FASTQ files (paired-end or sing
 reference_genomes/MARV_downloads/          # Downloaded MARV genomes (unfiltered)
 reference_genomes/MARV_compare/            # Filtered MARV reference genomes ≥18,000 bp
 database/nextclade_marburg_dataset/        # Nextclade reference dataset (tree, reference.fasta, genome_annotation.gff3, etc.)
-metadata/                                  # Sample metadata for TreeTime, IQ-TREE, and other analyses
+metadata/                                  # Sample metadata for BEAST, IQ-TREE, and other analyses (name,date,year,source,country)
 
 ```
 
 ## Usage
 1. Place raw FASTQ files in a designated directory (e.g., raw_reads/).
 2. Prepare the reference genomes in reference_genomes/MARV_downloads/ and filtered genomes in reference_genomes/MARV_compare/.
-3. Prepare metadata for TreeTime/IQ-TREE in metadata/all_seq_metadata.csv.
+3. Prepare metadata for BEAST/IQ-TREE in metadata/all_seq_metadata.csv (columns: name,date,year,source,country).
 4.  Run the full pipeline:
 ```bash
 bash scripts/run_MARV-GEN_full_pipeline.sh
@@ -210,9 +211,25 @@ bash scripts/msa_batch.sh
 ```bash
 bash scripts/iqtree_batch.sh
 ```
-#### Step 12: Time-resolved phylogeny (TreeTime)
+#### Step 12: Bayesian phylodynamics (BEAST)
+
+Four sequential steps:
+
 ```bash
-bash scripts/treetime_batch.sh
+# 1. Generate BEAST XML from alignment + dated metadata
+python scripts/create_beast_xml.py \
+  --alignment results/10_msa/alignment.fasta \
+  --metadata metadata/all_seq_metadata.csv \
+  --output results/12_beast/marv_beast.xml
+
+# 2. Run BEAST MCMC
+bash scripts/run_beast.sh results/12_beast/marv_beast.xml
+
+# 3. Convergence diagnostics (ESS, traces)
+bash scripts/diagnose_beast.sh results/12_beast/
+
+# 4. Tree post-processing (MCC tree, annotation, figures)
+bash scripts/process_beast_trees.sh results/12_beast/
 ```
 
 
@@ -238,7 +255,7 @@ MARV-GEN-VSP-Illumina-Analysis/
 │       ├── CHANGELOG.md
 │       └── README.md
 ├── metadata/
-│   └── all_seq_metadata.csv                    # Sample metadata for TreeTime/IQ-TREE
+│   └── all_seq_metadata.csv                    # Sample metadata for BEAST/IQ-TREE (name,date,...)
 ├── results/
 │   ├── 01_fastp/                              # Fastp QC output
 │   ├── 02_clean_reads/                         # Host-cleaned reads
@@ -251,10 +268,12 @@ MARV-GEN-VSP-Illumina-Analysis/
 │   ├── 09_nextclade/                           # Nextclade clade assignment results
 │   ├── 10_msa/                                 # Multiple sequence alignment outputs (MAFFT)
 │   ├── 11_phylogeny/                            # IQ-TREE phylogenetic trees
-│   ├── 12_treetime/                             # Time-resolved phylogeny (TreeTime)
-│       ├── visualization /
-│       └── MARV.A.1/
-│              └── visualization/
+│   ├── 12_beast/                                # BEAST phylodynamics
+│   │   ├── marv_beast.xml                       # Generated XML configuration
+│   │   ├── marv.log                             # MCMC log
+│   │   ├── marv.trees                           # Posterior trees
+│   │   ├── diagnostics/                         # Convergence reports
+│   │   └── trees/                               # MCC / annotated trees + figures
 │   └── 13_multiqc/
 │       ├── fastp/                              # MultiQC report for Fastp
 │       ├── nextclade/                           # MultiQC report for Nextclade
@@ -311,16 +330,30 @@ These scripts generate publication-quality visualizations to complement the anal
 
 ---
 
-### Time-Scaled Phylogenetic Tree
+### Bayesian Time-Scaled Phylogeny (BEAST)
 
-**Script:** `treetime_vis_2_MARV.A.1.py`
+Bayesian phylodynamic analysis is performed with **BEAST** using tip dates from `metadata/all_seq_metadata.csv`. Clade labels are assigned separately (e.g. by Nextclade) and are not required for the BEAST run.
 
-- Prunes MARV.A.1 tree to Ethiopian sequences.  
-- Highlights Ethiopian sequences with larger markers.  
-- Annotates bootstrap values and adds a temporal axis.  
-- Produces PDF, PNG, SVG, and EPS high-resolution figures.
+**Workflow (scripts in `scripts/`):**
 
-**Outputs:** `MARV.A1_Bootstrap_Labeled_NoTitle_Tree.{pdf,png,svg,eps}`  
+| Step | Script | Description |
+|------|--------|-------------|
+| 1 | `create_beast_xml.py` | Builds a BEAST XML from the MSA and dated tip metadata (strict clock / coalescent model; tip dates parsed from mixed date formats). |
+| 2 | `run_beast.sh` | Launches the BEAST MCMC chain and writes log and tree files. |
+| 3 | `diagnose_beast.sh` | Convergence diagnostics (e.g. ESS, trace inspection) on the MCMC log. |
+| 4 | `process_beast_trees.sh` | Post-processes posterior trees (MCC summary tree, annotation, publication figures). |
+
+**Typical inputs**
+- Multiple sequence alignment (`results/10_msa/alignment.fasta` or equivalent)
+- Tip metadata: `metadata/all_seq_metadata.csv` (`name`, `date`, optional `year`, `source`, `country`)
+
+**Typical outputs** (`results/12_beast/`)
+- `marv_beast.xml` — BEAST configuration  
+- `marv.log` — MCMC log  
+- `marv.trees` — posterior trees  
+- MCC / annotated time tree and figures after post-processing  
+
+**Note:** TreeTime scripts (e.g. `treetime_vis_2_MARV.A.1.py`) are retained in `scripts/` for legacy use but are no longer part of the primary reported analysis.  
 
 
 ## Logging
