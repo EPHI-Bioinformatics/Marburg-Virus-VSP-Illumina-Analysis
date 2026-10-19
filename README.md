@@ -364,7 +364,7 @@ Logs capture runtime, errors, and pipeline decisions.
 
 - **Betselot Zerihun Ayano** – [GitHub @betselotz](https://github.com/betselotz)  
 - **Melak Getu Bire** – [GitHub @MelakG13](https://github.com/MelakG13)
-- **Maysa-N ** – [GitHub @Maysa-N](https://github.com/Maysa-N)
+- **Maysa-N** – [GitHub @Maysa-N](https://github.com/Maysa-N)
 
 ## License
 
